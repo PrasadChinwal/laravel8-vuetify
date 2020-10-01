@@ -2033,17 +2033,12 @@ __webpack_require__.r(__webpack_exports__);
     return {
       isLoading: false,
       users: [],
-      page: 1,
       last_page: 0,
       total: 0,
       itemsPerPage: 5,
-      pagination: {
-        current: 1,
-        total: 0
-      },
       options: {
-        page: 1,
-        itemsPerPage: 5
+        itemsPerPage: 5,
+        multiSort: true
       },
       search: '',
       headers: [{
@@ -2062,29 +2057,59 @@ __webpack_require__.r(__webpack_exports__);
         text: 'Current Team ID',
         value: 'current_team_id',
         sortable: true
-      }, {
-        text: 'Profile Photo',
-        value: 'profile_photo_url',
-        sortable: true
       }]
     };
   },
   mounted: function mounted() {
     this.fetchUsers();
   },
-  methods: {
-    fetchUsers: function fetchUsers() {
+  watch: {
+    search: function search(_search) {
       var _this = this;
 
-      axios.get('/api/user/?rowsPerPage=' + this.itemsPerPage + '&page=' + this.page + '&search=' + this.search).then(function (response) {
-        _this.users = response.data.data;
-        _this.page = response.data.current_page;
-        _this.total = response.data.total;
-        _this.last_page = response.data.last_page;
-        _this.itemsPerPage = response.data.per_page;
+      if (_search.length === 0) {
+        this.fetchUsers();
+      }
+
+      if (!this.isLoading && _search.length > 3) {
+        setTimeout(function () {
+          _this.fetchUsers();
+
+          _this.isLoading = false;
+        }, 3000); // 1 sec delay
+      }
+    },
+    options: {
+      handler: function handler() {
+        this.fetchUsers();
+      },
+      deep: true
+    }
+  },
+  methods: {
+    fetchUsers: function fetchUsers() {
+      var _this2 = this;
+
+      this.isLoading = true;
+      var apiEndpoint = '/api/user/?rowsPerPage=' + this.itemsPerPage + '&page=' + this.options.page;
+
+      if (this.search.length > 3) {
+        apiEndpoint = apiEndpoint + '&search=' + this.search;
+      }
+
+      if (this.options.sortBy.length >= 1 && this.options.sortDesc.length >= 1) {
+        apiEndpoint = apiEndpoint + '&sortBy=' + this.options.sortBy + '&sortDesc=' + this.options.sortDesc;
+      }
+
+      axios.get(apiEndpoint).then(function (response) {
+        _this2.users = response.data.data;
+        _this2.options.page = response.data.current_page;
+        _this2.total = response.data.total;
+        _this2.last_page = response.data.last_page;
+        _this2.itemsPerPage = response.data.per_page;
       })["catch"](function (error) {
         console.log(error);
-      });
+      })["finally"](this.isLoading = false);
     },
     onPageChange: function onPageChange() {
       this.fetchUsers();
@@ -20447,7 +20472,13 @@ var render = function() {
                   items: _vm.users,
                   "items-per-page": _vm.itemsPerPage,
                   options: _vm.options,
-                  "server-items-length": _vm.total
+                  "server-items-length": _vm.total,
+                  "hide-default-footer": ""
+                },
+                on: {
+                  "update:options": function($event) {
+                    _vm.options = $event
+                  }
                 },
                 scopedSlots: _vm._u([
                   {
@@ -20473,17 +20504,17 @@ var render = function() {
               _vm._v(" "),
               _c("v-pagination", {
                 attrs: {
+                  color: "success",
                   length: _vm.last_page,
-                  "total-visible": 5,
-                  circle: ""
+                  "total-visible": 5
                 },
                 on: { input: _vm.onPageChange },
                 model: {
-                  value: _vm.page,
+                  value: _vm.options.page,
                   callback: function($$v) {
-                    _vm.page = $$v
+                    _vm.$set(_vm.options, "page", $$v)
                   },
-                  expression: "page"
+                  expression: "options.page"
                 }
               })
             ],
@@ -77737,19 +77768,14 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var vuetify_dist_vuetify_min_css__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(vuetify_dist_vuetify_min_css__WEBPACK_IMPORTED_MODULE_2__);
 /* harmony import */ var _mdi_font_css_materialdesignicons_css__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @mdi/font/css/materialdesignicons.css */ "./node_modules/@mdi/font/css/materialdesignicons.css");
 /* harmony import */ var _mdi_font_css_materialdesignicons_css__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(_mdi_font_css_materialdesignicons_css__WEBPACK_IMPORTED_MODULE_3__);
-/* harmony import */ var vuex__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! vuex */ "./node_modules/vuex/dist/vuex.esm.js");
-/* harmony import */ var _store__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./store */ "./resources/js/store/index.js");
 
 
 
  // Ensure you are using css-loader
 
-
-
 window.axios = __webpack_require__(/*! axios */ "./node_modules/axios/index.js");
 window.Vue = __webpack_require__(/*! vue */ "./node_modules/vue/dist/vue.common.js");
 vue__WEBPACK_IMPORTED_MODULE_0___default.a.config.productionTip = false;
-vue__WEBPACK_IMPORTED_MODULE_0___default.a.use(vuex__WEBPACK_IMPORTED_MODULE_4__["default"]);
 
 __webpack_require__(/*! ./bootstrap */ "./resources/js/bootstrap.js");
 
@@ -77761,7 +77787,6 @@ var app = new vue__WEBPACK_IMPORTED_MODULE_0___default.a({
   icons: {
     iconfont: 'mdi'
   },
-  store: _store__WEBPACK_IMPORTED_MODULE_5__["default"],
   vuetify: new vuetify__WEBPACK_IMPORTED_MODULE_1___default.a(opts)
 });
 
@@ -77865,81 +77890,6 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "staticRenderFns", function() { return _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_Index_vue_vue_type_template_id_3aca4497_scoped_true___WEBPACK_IMPORTED_MODULE_0__["staticRenderFns"]; });
 
 
-
-/***/ }),
-
-/***/ "./resources/js/store/index.js":
-/*!*************************************!*\
-  !*** ./resources/js/store/index.js ***!
-  \*************************************/
-/*! exports provided: default */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony import */ var vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vue */ "./node_modules/vue/dist/vue.common.js");
-/* harmony import */ var vue__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vue__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var vuex__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vuex */ "./node_modules/vuex/dist/vuex.esm.js");
-/* harmony import */ var _modules_user_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./modules/user.js */ "./resources/js/store/modules/user.js");
-
-
-
-vue__WEBPACK_IMPORTED_MODULE_0___default.a.use(vuex__WEBPACK_IMPORTED_MODULE_1__["default"]);
-/* harmony default export */ __webpack_exports__["default"] = (new vuex__WEBPACK_IMPORTED_MODULE_1__["default"].Store({
-  modules: {
-    user: _modules_user_js__WEBPACK_IMPORTED_MODULE_2__["default"]
-  }
-}));
-
-/***/ }),
-
-/***/ "./resources/js/store/modules/user.js":
-/*!********************************************!*\
-  !*** ./resources/js/store/modules/user.js ***!
-  \********************************************/
-/*! exports provided: default */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-// initial state
-var state = {
-  users: [],
-  pagination: {
-    rowsPerPage: 5,
-    page: 1
-  },
-  totalItems: 0
-}; // getters
-
-var getters = {}; // actions
-
-var actions = {
-  getCustomers: function getCustomers(context, page) {
-    var page_number = page.page || this.state.pagination.page;
-    var rowsPerPage = page.rowsPerPage || this.state.pagination.rowsPerPage;
-    axios.get('/api/user?page=' + page_number + '&rowsPerPage=' + rowsPerPage).then(function (response) {
-      console.log(response);
-      context.commit('updateUsers', response.data);
-    });
-  }
-}; // mutations
-
-var mutations = {
-  updateUsers: function updateUsers(state, payload) {
-    state.users = payload.data;
-    state.pagination.page = payload.current_page;
-    state.pagination.rowsPerPage = payload.per_page;
-    state.totalItems = payload.total;
-  }
-};
-/* harmony default export */ __webpack_exports__["default"] = ({
-  namespaced: true,
-  state: state,
-  getters: getters,
-  actions: actions,
-  mutations: mutations
-});
 
 /***/ }),
 

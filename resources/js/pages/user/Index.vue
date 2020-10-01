@@ -11,7 +11,7 @@
             <v-card-text>
                 <!-- :pagination.sync="pagination" -->
                 <v-data-table :headers="headers" :items="users" :items-per-page="itemsPerPage"
-                     :options="options" :server-items-length="total"
+                     :options.sync="options" :server-items-length="total" hide-default-footer
                 >
                     <template v-slot:item.profile_photo_url="{ item }">
                         <v-avatar size="48">
@@ -20,10 +20,10 @@
                     </template>
                 </v-data-table>
                 <v-pagination
-                    v-model="page"
+                    color="success"
+                    v-model="options.page"
                     :length="last_page"
                     :total-visible="5"
-                    circle
                     @input="onPageChange"
                 ></v-pagination>
             </v-card-text>
@@ -39,17 +39,12 @@ export default {
         return {
             isLoading: false,
             users:[],
-            page: 1,
             last_page: 0,
             total: 0,
             itemsPerPage: 5,
-            pagination: {
-                current: 1,
-                total: 0
-            },
             options: {
-                page: 1,
                 itemsPerPage: 5,
+                multiSort: true,
             },
             search: '',
             headers: [
@@ -57,25 +52,54 @@ export default {
                 {text: 'Email', value: 'email', sortable: true},
                 {text: 'Email Verified At', value: 'email_verified_at', sortable: true},
                 {text: 'Current Team ID', value: 'current_team_id', sortable: true},
-                {text: 'Profile Photo', value: 'profile_photo_url', sortable: true},
             ],
         }
     },
     mounted() {
         this.fetchUsers();
     },
+    watch: {
+        search(search) {
+            if(search.length === 0) {
+                this.fetchUsers();
+            }
+            if(!this.isLoading && search.length > 3) {
+                setTimeout(() => {
+                    this.fetchUsers();
+                    this.isLoading = false;
+                }, 3000); // 1 sec delay
+            }
+        },
+        options: {
+            handler () {
+                this.fetchUsers()
+            },
+            deep: true,
+        },
+    },
     methods: {
         fetchUsers: function() {
-            axios.get('/api/user/?rowsPerPage=' + this.itemsPerPage +'&page=' + this.page + '&search=' + this.search)
+            this.isLoading = true;
+            let apiEndpoint = '/api/user/?rowsPerPage=' + this.itemsPerPage + '&page=' + this.options.page;
+
+            if(this.search.length > 3) {
+                apiEndpoint = apiEndpoint + '&search=' + this.search;
+            }
+
+            if(this.options.sortBy.length >= 1 && this.options.sortDesc.length >= 1) {
+                apiEndpoint = apiEndpoint + '&sortBy=' + this.options.sortBy + '&sortDesc=' + this.options.sortDesc;
+            }
+
+            axios.get(apiEndpoint)
             .then((response) => {
                 this.users = response.data.data;
-                this.page = response.data.current_page;
+                this.options.page = response.data.current_page;
                 this.total = response.data.total;
                 this.last_page = response.data.last_page;
                 this.itemsPerPage = response.data.per_page;
             }).catch(error => {
                 console.log(error);
-            })
+            }).finally(this.isLoading = false);
         },
         onPageChange() {
             this.fetchUsers();
