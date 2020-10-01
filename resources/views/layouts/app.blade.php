@@ -38,6 +38,9 @@
                                     {{ __('Dashboard') }}
                                 </x-jet-nav-link>
                             </div>
+                            <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
+                                <a href="/user" class="my-5">Users</a>
+                            </div>
                         </div>
 
                         <!-- Settings Dropdown -->
